@@ -1,0 +1,21 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: interview_scheduler
+      POSTGRES_USER: scheduler_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - scheduler_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scheduler_user -d interview_scheduler"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  scheduler_pgdata:
