@@ -1,8 +1,11 @@
 package com.hire.interview.controller;
 
 import com.hire.interview.dto.CandidateRegistrationRequest;
+import com.hire.interview.dto.LoginRequest;
+import com.hire.interview.dto.LoginResponse;
 import com.hire.interview.dto.UserResponse;
 import com.hire.interview.entity.User;
+import com.hire.interview.service.AuthenticationService;
 import com.hire.interview.service.UserService;
 
 import jakarta.validation.Valid;
@@ -15,11 +18,15 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final UserService userService;
+    private final AuthenticationService authenticationService;
 
-    public AuthController(UserService userService) {
+    public AuthController(
+            UserService userService,
+            AuthenticationService authenticationService) {
+
         this.userService = userService;
+        this.authenticationService = authenticationService;
     }
-
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(
             @Valid @RequestBody CandidateRegistrationRequest request
@@ -36,5 +43,13 @@ public class AuthController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
+    }
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(
+            @Valid @RequestBody LoginRequest request) {
+
+        LoginResponse response = authenticationService.login(request);
+
+        return ResponseEntity.ok(response);
     }
 }

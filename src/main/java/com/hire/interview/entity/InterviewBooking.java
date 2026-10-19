@@ -97,4 +97,8 @@ public class InterviewBooking {
     public Instant getCreatedAt() {
         return createdAt;
     }
+    public void reschedule(Instant startAt, Instant endAt) {
+        this.startAt = startAt;
+        this.endAt = endAt;
+    }
 }
