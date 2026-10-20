@@ -43,40 +43,85 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
 
+        // Step 1: Check whether Authorization header exists.
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("JWT DEBUG: Missing or invalid Bearer header.");
+
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = authHeader.substring(7);
+        // Step 2: Extract the token.
+        String token = authHeader.substring(7).trim();
+
+        if (token.isEmpty()) {
+            System.out.println("JWT DEBUG: Token is empty.");
+
+            SecurityContextHolder.clearContext();
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         try {
+            // Step 3: Verify token signature and extract email.
             String email = jwtService.extractEmail(token);
 
+            System.out.println("JWT DEBUG: Token parsed successfully.");
+
+            // Step 4: Find the user in the database.
             User user = userRepository.findByEmail(email)
                     .orElse(null);
 
-            if (user != null && jwtService.isTokenValid(token, user)) {
+            if (user == null) {
+                System.out.println("JWT DEBUG: User not found.");
 
-                var authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                user.getEmail(),
-                                null,
-                                List.of(
-                                        new SimpleGrantedAuthority(
-                                                "ROLE_" + user.getRole().name()
-                                        )
-                                )
-                        );
-
-                SecurityContextHolder.getContext()
-                        .setAuthentication(authentication);
+                SecurityContextHolder.clearContext();
+                filterChain.doFilter(request, response);
+                return;
             }
 
+            // Step 5: Validate the token against the user.
+            if (!jwtService.isTokenValid(token, user)) {
+                System.out.println("JWT DEBUG: Token validation failed.");
+
+                SecurityContextHolder.clearContext();
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // Step 6: Create Spring Security authentication.
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            user.getEmail(),
+                            null,
+                            List.of(
+                                    new SimpleGrantedAuthority(
+                                            "ROLE_" + user.getRole().name()
+                                    )
+                            )
+                    );
+
+            // Step 7: Mark this request as authenticated.
+            SecurityContextHolder.getContext()
+                    .setAuthentication(authentication);
+
+            System.out.println(
+                    "JWT DEBUG: Authentication successful. Role = "
+                            + user.getRole().name()
+            );
+
         } catch (JwtException | IllegalArgumentException ex) {
+
+            // Never print the actual token or password.
+            System.out.println(
+                    "JWT DEBUG: Token rejected. Reason = "
+                            + ex.getClass().getSimpleName()
+            );
+
             SecurityContextHolder.clearContext();
         }
 
+        // Continue to the controller/security authorization rules.
         filterChain.doFilter(request, response);
     }
 }
