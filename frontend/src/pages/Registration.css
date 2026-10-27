@@ -1,0 +1,60 @@
+.registration-card {
+    max-width: 480px;
+}
+
+.registration-card .login-brand {
+    margin-bottom: 26px;
+}
+
+.registration-card .login-subtitle {
+    margin-bottom: 22px;
+}
+
+.registration-card .login-form {
+    gap: 15px;
+}
+
+.form-group select {
+    width: 100%;
+    min-height: 45px;
+    padding: 12px 14px;
+    color: #0f172a;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    outline: none;
+    font-size: 14px;
+}
+
+.form-group select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.field-hint {
+    color: #94a3b8;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.auth-switch {
+    margin: 22px 0 0;
+    color: #64748b;
+    font-size: 13px;
+    text-align: center;
+}
+
+.auth-link {
+    color: #2563eb;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.auth-link:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+
+.registration-card .login-footer {
+    margin-top: 24px;
+}

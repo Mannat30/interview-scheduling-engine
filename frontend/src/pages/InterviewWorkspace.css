@@ -1,0 +1,452 @@
+.live-workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+    margin: 22px 0;
+    color: #24314c;
+}
+
+.live-workspace-heading,
+.live-panel-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.live-workspace-heading h2,
+.live-panel-heading h3 {
+    margin: 8px 0;
+    color: #24314c;
+    font-family: "Manrope", sans-serif;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.6px;
+}
+
+.live-workspace-heading p,
+.live-panel-heading p {
+    margin: 0;
+    color: #8793aa;
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+.live-kicker {
+    color: #6d7eeb;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.35px;
+}
+
+.live-refresh {
+    flex-shrink: 0;
+    padding: 9px 12px;
+    color: #596ddc;
+    background: #f3f5ff;
+    border: 1px solid #e1e6ff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.live-refresh:hover {
+    background: #e8ecff;
+}
+
+.live-panel {
+    min-width: 0;
+    padding: 22px;
+    background: #fff;
+    border: 1px solid #e8edf6;
+    border-radius: 15px;
+    box-shadow: 0 6px 18px rgba(32, 48, 89, 0.035);
+}
+
+.live-booking-form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    align-items: end;
+    gap: 12px;
+    margin-top: 21px;
+}
+
+.live-booking-form label {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 8px;
+    color: #687590;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.live-booking-form input,
+.live-booking-form select {
+    width: 100%;
+    min-width: 0;
+    min-height: 41px;
+    padding: 0 11px;
+    color: #33415d;
+    background: #fbfcff;
+    border: 1px solid #e5eaf4;
+    border-radius: 8px;
+    outline: none;
+    font-size: 11px;
+}
+
+.live-booking-form input:focus,
+.live-booking-form select:focus {
+    background: #fff;
+    border-color: #8999f7;
+    box-shadow: 0 0 0 3px rgba(99, 117, 240, 0.1);
+}
+
+.live-primary-button {
+    display: inline-flex;
+    min-height: 41px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 15px;
+    color: #fff;
+    background: linear-gradient(110deg, #5b74f4, #6759e9);
+    border: 0;
+    border-radius: 8px;
+    box-shadow: 0 5px 12px rgba(82, 102, 237, 0.14);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 750;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.live-primary-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.live-primary-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.live-slots-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 25px;
+    padding-top: 17px;
+    border-top: 1px solid #edf0f6;
+}
+
+.live-slots-heading > strong {
+    color: #37435e;
+    font-size: 12px;
+}
+
+.live-slots-heading > span {
+    color: #8a96ad;
+    font-size: 10px;
+}
+
+.live-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.live-slot {
+    display: flex;
+    min-width: 0;
+    min-height: 60px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px;
+    text-align: left;
+    color: #5068dc;
+    background: #f8f9ff;
+    border: 1px solid #e6eafe;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, transform 0.2s;
+}
+
+.live-slot:hover {
+    background: #f0f3ff;
+    border-color: #b8c3ff;
+    transform: translateY(-1px);
+}
+
+.live-slot strong {
+    font-size: 11px;
+}
+
+.live-slot span {
+    color: #909bb1;
+    font-size: 9px;
+}
+
+.live-slot-selected {
+    color: #fff;
+    background: linear-gradient(110deg, #6578f4, #6659e7);
+    border-color: transparent;
+    box-shadow: 0 5px 13px rgba(87, 104, 233, 0.15);
+}
+
+.live-slot-selected span {
+    color: #e0e5ff;
+}
+
+.live-booking-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 17px;
+    margin-top: 18px;
+    border-top: 1px solid #edf0f6;
+}
+
+.live-booking-footer > span {
+    color: #8e99af;
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+.live-empty {
+    padding: 21px 4px 5px;
+    margin: 0;
+    color: #8d98ae;
+    font-size: 11px;
+    line-height: 1.8;
+}
+
+.live-inline-error {
+    padding: 12px;
+    margin-top: 15px;
+    color: #ad424a;
+    background: #fff4f4;
+    border: 1px solid #ffdfdf;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+.live-message {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    color: #4c5ebd;
+    background: #f0f2ff;
+    border: 1px solid #dfe5ff;
+    border-radius: 9px;
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+.live-message button {
+    color: #6272cd;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.live-count {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    place-items: center;
+    color: #536de7;
+    background: #eff2ff;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.live-bookings-list {
+    margin-top: 14px;
+}
+
+.live-booking-row {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-width: 0;
+    padding: 16px 0;
+    border-top: 1px solid #eff1f7;
+}
+
+.live-booking-date-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    place-items: center;
+    color: #586fe9;
+    background: #eef1ff;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.live-booking-details {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px 12px;
+}
+
+.live-booking-details > strong {
+    width: 100%;
+    color: #36435e;
+    font-size: 12px;
+}
+
+.live-booking-details > span {
+    color: #8b97ae;
+    font-size: 10px;
+}
+
+.live-status {
+    padding: 5px 7px;
+    color: #63718a !important;
+    background: #f1f3f8;
+    border-radius: 6px;
+    font-size: 9px !important;
+    font-weight: 700;
+}
+
+.live-status-scheduled {
+    color: #2e8b70 !important;
+    background: #eaf9f2;
+}
+
+.live-status-cancelled {
+    color: #a95760 !important;
+    background: #fff0f0;
+}
+
+.live-status-completed {
+    color: #596fcf !important;
+    background: #eff2ff;
+}
+
+.live-booking-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 7px;
+}
+
+.live-action-button,
+.live-cancel-button {
+    min-height: 32px;
+    padding: 0 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.live-action-button {
+    color: #4e66d5;
+    background: #f0f3ff;
+    border: 1px solid #e0e6ff;
+}
+
+.live-cancel-button {
+    color: #b14c58;
+    background: #fff7f7;
+    border: 1px solid #f5dddd;
+}
+
+.live-action-button:disabled,
+.live-cancel-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.live-availability-list {
+    margin-top: 14px;
+}
+
+.live-availability-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 0;
+    border-top: 1px solid #eff1f7;
+}
+
+.live-availability-item > span {
+    color: #7e8aa2;
+    font-size: 11px;
+}
+
+.live-availability-item > strong {
+    color: #465477;
+    font-size: 11px;
+}
+
+@media (max-width: 850px) {
+    .live-booking-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .live-booking-form > button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 560px) {
+    .live-panel {
+        padding: 16px 13px;
+    }
+
+    .live-workspace-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .live-booking-form {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .live-slots-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .live-booking-footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .live-booking-footer button {
+        width: 100%;
+    }
+
+    .live-booking-row {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .live-booking-details {
+        width: calc(100% - 56px);
+        flex: 1;
+    }
+
+    .live-booking-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}

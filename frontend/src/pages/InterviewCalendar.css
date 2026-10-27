@@ -1,0 +1,333 @@
+.iw-calendar-panel {
+    margin: 0 0 22px;
+    padding: 24px;
+    background: #ffffff;
+    border: 1px solid #e4e9f4;
+    border-radius: 18px;
+    box-shadow: 0 8px 28px rgba(25, 42, 81, 0.045);
+    color: #24324f;
+}
+
+.iw-calendar-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.iw-calendar-eyebrow {
+    display: block;
+    margin-bottom: 8px;
+    color: #6574ff;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+}
+
+.iw-calendar-header h3 {
+    margin: 0;
+    color: #22304d;
+    font-size: 22px;
+    font-weight: 750;
+}
+
+.iw-calendar-header p {
+    margin: 8px 0 0;
+    color: #8995ae;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* Month navigation */
+
+.iw-calendar-month-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+}
+
+.iw-calendar-month-controls strong {
+    min-width: 132px;
+    text-align: center;
+    color: #34415d;
+    font-size: 14px;
+}
+
+.iw-calendar-month-controls button {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid #e2e7f3;
+    border-radius: 10px;
+    background: #f9faff;
+    color: #5c68e8;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.iw-calendar-month-controls button:hover {
+    border-color: #bfc6ff;
+    background: #f0f2ff;
+}
+
+/* Calendar grid */
+
+.iw-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.iw-calendar-weekday {
+    padding: 8px 4px;
+    color: #8a96ae;
+    font-size: 11px;
+    font-weight: 750;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.iw-calendar-day,
+.iw-calendar-empty {
+    min-width: 0;
+    min-height: 82px;
+    border-radius: 12px;
+}
+
+/* Individual calendar days */
+
+.iw-calendar-day {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 10px;
+    border: 1px solid #edf0f7;
+    background: #fbfcff;
+    color: #293753;
+    text-align: left;
+    cursor: pointer;
+    transition:
+            border-color 0.15s ease,
+            background 0.15s ease,
+            transform 0.15s ease;
+}
+
+.iw-calendar-day:hover {
+    border-color: #aab3ff;
+    background: #f5f6ff;
+    transform: translateY(-1px);
+}
+
+.iw-calendar-day:focus-visible,
+.iw-calendar-month-controls button:focus-visible {
+    outline: 3px solid #aab3ff;
+    outline-offset: 2px;
+}
+
+/* Selected date */
+
+.iw-calendar-day.is-selected {
+    border: 2px solid #6366f1;
+    padding: 9px;
+    background: #f1f2ff;
+}
+
+.iw-calendar-day.is-selected .iw-calendar-day-number {
+    color: #4f46e5;
+    font-weight: 800;
+}
+
+/* Today's date */
+
+.iw-calendar-day.is-today .iw-calendar-day-number {
+    display: inline-grid;
+    place-items: center;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background: #202d4c;
+    color: #ffffff;
+}
+
+.iw-calendar-day.is-selected.is-today .iw-calendar-day-number {
+    background: #4f46e5;
+    color: #ffffff;
+}
+
+/* Date number */
+
+.iw-calendar-day-number {
+    display: inline-grid;
+    place-items: center;
+    min-width: 25px;
+    min-height: 25px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* Availability and interview markers */
+
+.iw-calendar-day-markers {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    max-width: 100%;
+}
+
+.iw-calendar-marker {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 3px 5px;
+    border-radius: 5px;
+    font-size: 9px;
+    font-weight: 750;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.iw-calendar-marker.is-available {
+    background: #e5f8ef;
+    color: #177448;
+}
+
+.iw-calendar-marker.is-booked {
+    background: #e9eaff;
+    color: #4f46e5;
+}
+
+/* Calendar footer and legend */
+
+.iw-calendar-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #edf0f7;
+}
+
+.iw-calendar-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.iw-calendar-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #8490a8;
+    font-size: 11px;
+}
+
+.iw-legend-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.iw-legend-dot.is-available-dot {
+    background: #21a56b;
+}
+
+.iw-legend-dot.is-booked-dot {
+    background: #6565ef;
+}
+
+.iw-legend-dot.is-today-dot {
+    background: #253250;
+}
+
+.iw-calendar-footer p {
+    margin: 0;
+    color: #697691;
+    font-size: 11px;
+    font-weight: 650;
+}
+
+/* Tablet layout */
+
+@media (max-width: 900px) {
+    .iw-calendar-panel {
+        padding: 18px;
+    }
+
+    .iw-calendar-header {
+        flex-direction: column;
+    }
+
+    .iw-calendar-month-controls {
+        align-self: stretch;
+        justify-content: space-between;
+    }
+
+    .iw-calendar-day,
+    .iw-calendar-empty {
+        min-height: 68px;
+    }
+
+    .iw-calendar-day {
+        padding: 7px;
+    }
+
+    .iw-calendar-day.is-selected {
+        padding: 6px;
+    }
+
+    .iw-calendar-marker {
+        font-size: 8px;
+    }
+}
+
+/* Mobile layout */
+
+@media (max-width: 520px) {
+    .iw-calendar-grid {
+        gap: 4px;
+    }
+
+    .iw-calendar-day,
+    .iw-calendar-empty {
+        min-height: 54px;
+        border-radius: 8px;
+    }
+
+    .iw-calendar-day {
+        padding: 4px;
+        gap: 3px;
+    }
+
+    .iw-calendar-day.is-selected {
+        padding: 3px;
+    }
+
+    .iw-calendar-weekday {
+        font-size: 9px;
+    }
+
+    .iw-calendar-marker {
+        max-width: 38px;
+        font-size: 7px;
+        padding: 2px 3px;
+    }
+
+    .iw-calendar-header h3 {
+        font-size: 19px;
+    }
+
+    .iw-calendar-footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

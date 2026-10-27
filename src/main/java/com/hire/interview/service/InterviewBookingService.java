@@ -1,7 +1,11 @@
 package com.hire.interview.service;
 
 import com.hire.interview.dto.InterviewBookingResponse;
-import com.hire.interview.entity.*;
+import com.hire.interview.entity.InterviewBooking;
+import com.hire.interview.entity.InterviewStatus;
+import com.hire.interview.entity.InterviewerAvailability;
+import com.hire.interview.entity.User;
+import com.hire.interview.entity.UserRole;
 import com.hire.interview.exception.BookingConflictException;
 import com.hire.interview.exception.ResourceNotFoundException;
 import com.hire.interview.repository.InterviewBookingRepository;
@@ -11,14 +15,13 @@ import com.hire.interview.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceContext;
 
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -27,6 +30,7 @@ import java.util.List;
 
 @Service
 public class InterviewBookingService {
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -34,17 +38,19 @@ public class InterviewBookingService {
     private final InterviewBookingRepository bookingRepository;
     private final InterviewerAvailabilityRepository availabilityRepository;
 
-
-
     public InterviewBookingService(
             UserRepository userRepository,
             InterviewBookingRepository bookingRepository,
-            InterviewerAvailabilityRepository availabilityRepository) {
-
+            InterviewerAvailabilityRepository availabilityRepository
+    ) {
         this.userRepository = userRepository;
         this.bookingRepository = bookingRepository;
         this.availabilityRepository = availabilityRepository;
     }
+
+    // =========================================================
+    // 1. SCHEDULE A NEW INTERVIEW
+    // =========================================================
 
     @Transactional
     public InterviewBooking scheduleInterview(
@@ -53,40 +59,25 @@ public class InterviewBookingService {
             Instant startAt,
             Instant endAt
     ) {
-        // 1. Validate IDs.
-        if (candidateId == null || interviewerId == null) {
+        // Validate participant IDs.
+        if (candidateId == null || interviewerId == null
+                || candidateId <= 0 || interviewerId <= 0) {
             throw new IllegalArgumentException(
-                    "Candidate ID and interviewer ID are required"
+                    "Valid candidate ID and interviewer ID are required."
             );
         }
 
         if (candidateId.equals(interviewerId)) {
             throw new IllegalArgumentException(
-                    "Candidate and interviewer must be different users"
+                    "Candidate and interviewer must be different users."
             );
         }
 
-        // 2. Validate interview times.
-        if (startAt == null || endAt == null) {
-            throw new IllegalArgumentException(
-                    "Start time and end time are required"
-            );
-        }
+        // Validate interview times.
+        validateInterviewTimes(startAt, endAt);
 
-        if (!startAt.isBefore(endAt)) {
-            throw new IllegalArgumentException(
-                    "Start time must be before end time"
-            );
-        }
-
-        if (!startAt.isAfter(Instant.now())) {
-            throw new IllegalArgumentException(
-                    "Interview must be scheduled in the future"
-            );
-        }
-
-        // 3. Lock users in ascending ID order.
-        // This reduces deadlock risk when requests overlap.
+        // Lock participants in ascending ID order.
+        // This helps serialize conflicting booking operations.
         Long firstLockId = Math.min(candidateId, interviewerId);
         Long secondLockId = Math.max(candidateId, interviewerId);
 
@@ -102,8 +93,7 @@ public class InterviewBookingService {
                         "User not found: " + secondLockId
                 ));
 
-        // Restore the candidate and interviewer roles
-        // because users were loaded in ID order.
+        // Restore candidate/interviewer after sorting IDs.
         User candidate;
         User interviewer;
 
@@ -115,20 +105,28 @@ public class InterviewBookingService {
             interviewer = firstUser;
         }
 
-        // 4. Verify user roles.
+        // Verify user roles.
         if (candidate.getRole() != UserRole.CANDIDATE) {
             throw new IllegalArgumentException(
-                    "Selected candidate does not have the CANDIDATE role"
+                    "Selected candidate does not have the CANDIDATE role."
             );
         }
 
         if (interviewer.getRole() != UserRole.INTERVIEWER) {
             throw new IllegalArgumentException(
-                    "Selected interviewer does not have the INTERVIEWER role"
+                    "Selected interviewer does not have the INTERVIEWER role."
             );
         }
 
-        // 5. Check whether the candidate is already booked.
+        // IMPORTANT:
+        // Ensure the requested slot falls inside configured availability.
+        validateInterviewerAvailability(
+                interviewer,
+                startAt,
+                endAt
+        );
+
+        // Check whether the candidate already has a conflicting booking.
         boolean candidateBusy =
                 bookingRepository.existsConflictingBooking(
                         candidateId,
@@ -137,7 +135,7 @@ public class InterviewBookingService {
                         InterviewStatus.SCHEDULED
                 );
 
-        // 6. Check whether the interviewer is already booked.
+        // Check whether the interviewer already has a conflicting booking.
         boolean interviewerBusy =
                 bookingRepository.existsConflictingBooking(
                         interviewerId,
@@ -148,11 +146,11 @@ public class InterviewBookingService {
 
         if (candidateBusy || interviewerBusy) {
             throw new BookingConflictException(
-                    "Candidate or interviewer already has an overlapping interview"
+                    "Candidate or interviewer already has an overlapping interview."
             );
         }
 
-        // 7. Create the booking.
+        // Create and save the booking.
         InterviewBooking booking = new InterviewBooking(
                 candidate,
                 interviewer,
@@ -160,20 +158,19 @@ public class InterviewBookingService {
                 endAt
         );
 
-        // 8. Save the booking to PostgreSQL.
         return bookingRepository.save(booking);
     }
+
+    // =========================================================
+    // 2. CANCEL AN INTERVIEW
+    // =========================================================
 
     @Transactional
     public InterviewBooking cancelInterview(Long bookingId) {
 
-        if (bookingId == null || bookingId <= 0) {
-            throw new IllegalArgumentException(
-                    "A valid booking ID is required"
-            );
-        }
+        validateBookingId(bookingId);
 
-        // First, find the booking so we know which users to lock.
+        // Find the booking.
         InterviewBooking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Booking not found: " + bookingId
@@ -182,28 +179,19 @@ public class InterviewBookingService {
         Long candidateId = booking.getCandidate().getId();
         Long interviewerId = booking.getInterviewer().getId();
 
-        // Lock participants in ascending ID order, matching the
-        // order used by the booking service.
-        Long firstId = Math.min(candidateId, interviewerId);
-        Long secondId = Math.max(candidateId, interviewerId);
+        // Lock participants in a consistent order.
+        lockParticipants(candidateId, interviewerId);
 
-        userRepository.findByIdForUpdate(firstId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found: " + firstId
-                ));
+        // Refresh and lock the booking row.
+        entityManager.refresh(
+                booking,
+                LockModeType.PESSIMISTIC_WRITE
+        );
 
-        userRepository.findByIdForUpdate(secondId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found: " + secondId
-                ));
-
-        // Refresh the booking under a database row lock so we check
-        // its latest committed status.
-        entityManager.refresh(booking, LockModeType.PESSIMISTIC_WRITE);
-
+        // Only scheduled interviews can be cancelled.
         if (booking.getStatus() != InterviewStatus.SCHEDULED) {
             throw new BookingConflictException(
-                    "Only scheduled interviews can be cancelled"
+                    "Only scheduled interviews can be cancelled."
             );
         }
 
@@ -212,38 +200,22 @@ public class InterviewBookingService {
         return bookingRepository.save(booking);
     }
 
+    // =========================================================
+    // 3. RESCHEDULE AN EXISTING INTERVIEW
+    // =========================================================
+
     @Transactional
     public InterviewBooking rescheduleInterview(
             Long bookingId,
             Instant newStartAt,
             Instant newEndAt
     ) {
-        // 1. Validate the booking ID and new times.
-        if (bookingId == null || bookingId <= 0) {
-            throw new IllegalArgumentException(
-                    "A valid booking ID is required"
-            );
-        }
+        validateBookingId(bookingId);
 
-        if (newStartAt == null || newEndAt == null) {
-            throw new IllegalArgumentException(
-                    "New start and end times are required"
-            );
-        }
+        // Validate the new interview times.
+        validateInterviewTimes(newStartAt, newEndAt);
 
-        if (!newStartAt.isBefore(newEndAt)) {
-            throw new IllegalArgumentException(
-                    "Start time must be before end time"
-            );
-        }
-
-        if (!newStartAt.isAfter(Instant.now())) {
-            throw new IllegalArgumentException(
-                    "Interview must be rescheduled to a future time"
-            );
-        }
-
-        // 2. Find the existing booking.
+        // Find the existing booking.
         InterviewBooking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Booking not found: " + bookingId
@@ -252,30 +224,30 @@ public class InterviewBookingService {
         Long candidateId = booking.getCandidate().getId();
         Long interviewerId = booking.getInterviewer().getId();
 
-        // 3. Lock participants in ascending ID order.
-        Long firstId = Math.min(candidateId, interviewerId);
-        Long secondId = Math.max(candidateId, interviewerId);
+        // Lock participants in a consistent order.
+        lockParticipants(candidateId, interviewerId);
 
-        userRepository.findByIdForUpdate(firstId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found: " + firstId
-                ));
-
-        userRepository.findByIdForUpdate(secondId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "User not found: " + secondId
-                ));
-
-        // 4. Refresh and lock the booking itself.
-        entityManager.refresh(booking, LockModeType.PESSIMISTIC_WRITE);
+        // Refresh and lock the booking.
+        entityManager.refresh(
+                booking,
+                LockModeType.PESSIMISTIC_WRITE
+        );
 
         if (booking.getStatus() != InterviewStatus.SCHEDULED) {
             throw new BookingConflictException(
-                    "Only scheduled interviews can be rescheduled"
+                    "Only scheduled interviews can be rescheduled."
             );
         }
 
-        // 5. Check the candidate for conflicts, excluding this booking.
+        // IMPORTANT:
+        // Validate the new time against the interviewer's availability.
+        validateInterviewerAvailability(
+                booking.getInterviewer(),
+                newStartAt,
+                newEndAt
+        );
+
+        // Check candidate conflicts, excluding this booking.
         boolean candidateBusy =
                 bookingRepository.existsConflictingBookingExcludingBooking(
                         bookingId,
@@ -285,7 +257,7 @@ public class InterviewBookingService {
                         InterviewStatus.SCHEDULED
                 );
 
-        // 6. Check the interviewer for conflicts.
+        // Check interviewer conflicts, excluding this booking.
         boolean interviewerBusy =
                 bookingRepository.existsConflictingBookingExcludingBooking(
                         bookingId,
@@ -297,28 +269,83 @@ public class InterviewBookingService {
 
         if (candidateBusy || interviewerBusy) {
             throw new BookingConflictException(
-                    "Candidate or interviewer already has an overlapping interview"
+                    "Candidate or interviewer already has an overlapping interview."
             );
         }
 
-        // 7. Update the existing record, preserving its ID.
+        // Update the same booking instead of creating a new one.
         booking.reschedule(newStartAt, newEndAt);
 
-        // 8. Save the updated booking.
         return bookingRepository.save(booking);
     }
+
+    // =========================================================
+    // 4. VALIDATE INTERVIEW DATE AND TIME
+    // =========================================================
+
+    private void validateInterviewTimes(
+            Instant startAt,
+            Instant endAt
+    ) {
+        if (startAt == null || endAt == null) {
+            throw new IllegalArgumentException(
+                    "Start time and end time are required."
+            );
+        }
+
+        if (!startAt.isBefore(endAt)) {
+            throw new IllegalArgumentException(
+                    "Start time must be before end time."
+            );
+        }
+
+        if (!startAt.isAfter(Instant.now())) {
+            throw new IllegalArgumentException(
+                    "Interview must be scheduled in the future."
+            );
+        }
+    }
+
+    private void validateBookingId(Long bookingId) {
+        if (bookingId == null || bookingId <= 0) {
+            throw new IllegalArgumentException(
+                    "A valid booking ID is required."
+            );
+        }
+    }
+
+    // =========================================================
+    // 5. VALIDATE INTERVIEWER AVAILABILITY
+    // =========================================================
 
     private void validateInterviewerAvailability(
             User interviewer,
             Instant startAt,
-            Instant endAt) {
+            Instant endAt
+    ) {
+        if (interviewer.getTimeZone() == null
+                || interviewer.getTimeZone().isBlank()) {
+            throw new IllegalArgumentException(
+                    "Interviewer timezone is not configured."
+            );
+        }
 
-        ZoneId zone = ZoneId.of(interviewer.getTimeZone());
+        ZoneId zone;
 
+        try {
+            zone = ZoneId.of(interviewer.getTimeZone());
+        } catch (DateTimeException exception) {
+            throw new IllegalArgumentException(
+                    "Interviewer timezone is invalid.",
+                    exception
+            );
+        }
+
+        // Convert UTC instants into the interviewer's local timezone.
         ZonedDateTime localStart = startAt.atZone(zone);
         ZonedDateTime localEnd = endAt.atZone(zone);
 
-        // An interview must stay within one local calendar day.
+        // Interviews must start and finish on the same local date.
         if (!localStart.toLocalDate().equals(localEnd.toLocalDate())) {
             throw new IllegalArgumentException(
                     "Interview must start and end on the same local date."
@@ -328,6 +355,7 @@ public class InterviewBookingService {
         LocalTime requestedStart = localStart.toLocalTime();
         LocalTime requestedEnd = localEnd.toLocalTime();
 
+        // Fetch enabled availability windows for this weekday.
         List<InterviewerAvailability> windows =
                 availabilityRepository
                         .findByInterviewer_IdAndDayOfWeekAndEnabledTrue(
@@ -335,6 +363,7 @@ public class InterviewBookingService {
                                 localStart.getDayOfWeek()
                         );
 
+        // The requested interview must fit entirely within a window.
         boolean fitsAvailableWindow = windows.stream().anyMatch(window ->
                 !requestedStart.isBefore(window.getStartTime())
                         && !requestedEnd.isAfter(window.getEndTime())
@@ -345,17 +374,45 @@ public class InterviewBookingService {
                     "Requested time is outside the interviewer's available hours."
             );
         }
-    }@Transactional(readOnly = true)
+    }
+
+    // =========================================================
+    // 6. LOCK BOTH PARTICIPANTS
+    // =========================================================
+
+    private void lockParticipants(
+            Long candidateId,
+            Long interviewerId
+    ) {
+        Long firstId = Math.min(candidateId, interviewerId);
+        Long secondId = Math.max(candidateId, interviewerId);
+
+        userRepository.findByIdForUpdate(firstId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found: " + firstId
+                ));
+
+        if (!firstId.equals(secondId)) {
+            userRepository.findByIdForUpdate(secondId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "User not found: " + secondId
+                    ));
+        }
+    }
+
+    // =========================================================
+    // 7. GET ALL BOOKINGS FOR A PARTICIPANT
+    // =========================================================
+
+    @Transactional(readOnly = true)
     public Page<InterviewBookingResponse> getBookingsForParticipant(
             Long participantId,
-            Pageable pageable) {
-
+            Pageable pageable
+    ) {
         userRepository.findById(participantId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "User not found with id: " + participantId
-                        )
-                );
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with id: " + participantId
+                ));
 
         Page<InterviewBooking> bookings =
                 bookingRepository
@@ -367,17 +424,20 @@ public class InterviewBookingService {
 
         return bookings.map(InterviewBookingResponse::from);
     }
+
+    // =========================================================
+    // 8. GET UPCOMING BOOKINGS
+    // =========================================================
+
     @Transactional(readOnly = true)
     public Page<InterviewBookingResponse> getUpcomingBookings(
             Long participantId,
-            Pageable pageable) {
-
+            Pageable pageable
+    ) {
         userRepository.findById(participantId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "User not found with id: " + participantId
-                        )
-                );
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with id: " + participantId
+                ));
 
         Page<InterviewBooking> bookings =
                 bookingRepository.findUpcomingBookingsForParticipant(
@@ -389,17 +449,20 @@ public class InterviewBookingService {
 
         return bookings.map(InterviewBookingResponse::from);
     }
+
+    // =========================================================
+    // 9. GET COMPLETED BOOKINGS
+    // =========================================================
+
     @Transactional(readOnly = true)
     public Page<InterviewBookingResponse> getCompletedBookings(
             Long participantId,
-            Pageable pageable) {
-
+            Pageable pageable
+    ) {
         userRepository.findById(participantId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "User not found with id: " + participantId
-                        )
-                );
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with id: " + participantId
+                ));
 
         Page<InterviewBooking> bookings =
                 bookingRepository.findCompletedBookingsForParticipant(
@@ -410,41 +473,33 @@ public class InterviewBookingService {
                 );
 
         return bookings.map(InterviewBookingResponse::from);
-    }@Transactional
+    }
+
+    // =========================================================
+    // 10. MARK AN INTERVIEW AS COMPLETED
+    // =========================================================
+
+    @Transactional
     public InterviewBooking completeInterview(Long bookingId) {
 
+        validateBookingId(bookingId);
+
         InterviewBooking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Booking not found with id: " + bookingId
-                        )
-                );
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Booking not found with id: " + bookingId
+                ));
 
         Long candidateId = booking.getCandidate().getId();
         Long interviewerId = booking.getInterviewer().getId();
 
-        // Lock users in a consistent order to reduce deadlock risk.
-        Long firstUserId = Math.min(candidateId, interviewerId);
-        Long secondUserId = Math.max(candidateId, interviewerId);
+        // Lock participants in a consistent order.
+        lockParticipants(candidateId, interviewerId);
 
-        userRepository.findByIdForUpdate(firstUserId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "User not found with id: " + firstUserId
-                        )
-                );
-
-        if (!firstUserId.equals(secondUserId)) {
-            userRepository.findByIdForUpdate(secondUserId)
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException(
-                                    "User not found with id: " + secondUserId
-                            )
-                    );
-        }
-
-        // Refresh the booking and lock its database row.
-        entityManager.refresh(booking, LockModeType.PESSIMISTIC_WRITE);
+        // Refresh and lock the booking.
+        entityManager.refresh(
+                booking,
+                LockModeType.PESSIMISTIC_WRITE
+        );
 
         if (booking.getStatus() != InterviewStatus.SCHEDULED) {
             throw new BookingConflictException(
@@ -452,7 +507,9 @@ public class InterviewBookingService {
             );
         }
 
-        if (!booking.getEndAt().isBefore(Instant.now())) {
+        // An interview can only be marked complete after its end time.
+        if (booking.getEndAt() == null
+                || !booking.getEndAt().isBefore(Instant.now())) {
             throw new BookingConflictException(
                     "An interview can only be completed after its end time."
             );
@@ -462,5 +519,4 @@ public class InterviewBookingService {
 
         return bookingRepository.save(booking);
     }
-
 }

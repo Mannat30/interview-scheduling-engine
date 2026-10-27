@@ -1,25 +1,32 @@
 package com.hire.interview.dto;
 
+import com.hire.interview.entity.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record CandidateRegistrationRequest(
 
-        @NotBlank
-        @Size(max = 100)
+        @NotBlank(message = "Full name is required")
+        @Size(min = 2, max = 100)
         String fullName,
 
-        @NotBlank
-        @Email
-        @Size(max = 254)
+        @NotBlank(message = "Email is required")
+        @Email(message = "Enter a valid email")
         String email,
 
-        @NotBlank
+        @NotBlank(message = "Password is required")
         @Size(min = 8, max = 72)
         String password,
 
-        @Size(max = 50)
-        String timeZone
+        @NotBlank(message = "Time zone is required")
+        String timeZone,
 
-) {}
+        // Optional for compatibility with existing registration requests.
+        UserRole role,
+
+        // Required by the service only when registering as an interviewer.
+        String interviewerInviteCode
+
+) {
+}

@@ -2,15 +2,12 @@ package com.hire.interview.config;
 
 import com.hire.interview.security.JwtAuthenticationFilter;
 
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -22,122 +19,161 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @Configuration
-@EnableMethodSecurity
+@EnableWebSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     public SecurityConfig(
-            JwtAuthenticationFilter jwtAuthenticationFilter) {
+            JwtAuthenticationFilter jwtAuthenticationFilter
+    ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
+    // =========================================================
+    // 1. SECURITY FILTER CHAIN
+    // =========================================================
+
     @Bean
     public SecurityFilterChain securityFilterChain(
-            HttpSecurity http) throws Exception {
+            HttpSecurity http
+    ) throws Exception {
 
-        http
-                .cors(Customizer.withDefaults())
-
-                // Stateless JWT API
-                .csrf(csrf -> csrf.disable())
-
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        return http
+                .cors(cors ->
+                        cors.configurationSource(corsConfigurationSource())
                 )
 
-                .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint((request, response, exception) ->
-                                response.sendError(
-                                        HttpServletResponse.SC_UNAUTHORIZED,
-                                        "Authentication required"
-                                )
+                .csrf(csrf -> csrf.disable())
+
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
                         )
                 )
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // Public login and registration
+                        // CORS preflight requests
+                        .requestMatchers(
+                                HttpMethod.OPTIONS,
+                                "/**"
+                        ).permitAll()
+
+                        // Public authentication endpoints
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/auth/register",
                                 "/api/auth/login"
                         ).permitAll()
 
+                        // Public health information
                         .requestMatchers(
+                                HttpMethod.GET,
                                 "/actuator/health",
                                 "/actuator/info"
                         ).permitAll()
 
+                        // Interviewer directory:
+                        // candidates can choose an interviewer.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/interviewers"
+                        ).hasAnyRole(
+                                "CANDIDATE",
+                                "INTERVIEWER"
+                        )
+
+                        // Candidate creates bookings.
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/bookings"
-                        ).hasAnyRole("CANDIDATE", "RECRUITER")
+                        ).hasRole("CANDIDATE")
 
+                        // Candidate cancels their own bookings.
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/bookings/*/cancel"
+                        ).hasRole("CANDIDATE")
+
+                        // Candidate reschedules their own bookings.
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/bookings/*/reschedule"
+                        ).hasRole("CANDIDATE")
+
+                        // Only interviewers may complete interviews.
+                        // The controller verifies assignment ownership.
                         .requestMatchers(
                                 HttpMethod.PATCH,
                                 "/api/bookings/*/complete"
-                        ).hasAnyRole("INTERVIEWER", "RECRUITER")
+                        ).hasRole("INTERVIEWER")
 
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/interviewers/*/availability"
-                        ).hasAnyRole("INTERVIEWER", "RECRUITER")
-
-                        .requestMatchers(
-                                HttpMethod.PATCH,
-                                "/api/bookings/*/cancel",
-                                "/api/bookings/*/reschedule"
-                        ).hasAnyRole(
-                                "CANDIDATE", "INTERVIEWER", "RECRUITER"
-                        )
-
+                        // Booking history endpoints.
+                        // The controller checks participant ownership.
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/bookings/participant/**"
                         ).hasAnyRole(
-                                "CANDIDATE", "INTERVIEWER", "RECRUITER"
+                                "CANDIDATE",
+                                "INTERVIEWER"
                         )
+
+                        // Only interviewers manage their availability.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/interviewers/*/availability"
+                        ).hasRole("INTERVIEWER")
 
                         .requestMatchers(
                                 HttpMethod.GET,
-                                "/api/interviewers/*/availability",
+                                "/api/interviewers/*/availability"
+                        ).hasRole("INTERVIEWER")
+
+                        // Candidates search for available interview slots.
+                        .requestMatchers(
+                                HttpMethod.GET,
                                 "/api/interviewers/*/available-slots"
-                        ).hasAnyRole(
-                                "CANDIDATE", "INTERVIEWER", "RECRUITER"
+                        ).hasRole("CANDIDATE")
+
+                        // Other interviewer endpoints require authentication
+                        // and one of the supported application roles.
+                        .requestMatchers("/api/interviewers/**")
+                        .hasAnyRole(
+                                "CANDIDATE",
+                                "INTERVIEWER"
                         )
 
+                        // Any unmatched booking endpoint still requires
+                        // authentication and a supported role.
+                        .requestMatchers("/api/bookings/**")
+                        .hasAnyRole(
+                                "CANDIDATE",
+                                "INTERVIEWER"
+                        )
+
+                        // All other routes require authentication.
                         .anyRequest().authenticated()
                 )
 
-                .httpBasic(basic -> basic.disable())
-                .formLogin(form -> form.disable())
-
+                // Execute the JWT filter before username/password auth.
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
-                );
+                )
 
-        return http.build();
+                .build();
     }
 
-    @Bean
-    public FilterRegistrationBean<JwtAuthenticationFilter>
-    jwtFilterRegistration() {
-
-        FilterRegistrationBean<JwtAuthenticationFilter> registration =
-                new FilterRegistrationBean<>(jwtAuthenticationFilter);
-
-        registration.setEnabled(false);
-        return registration;
-    }
+    // =========================================================
+    // 2. CORS CONFIGURATION
+    // =========================================================
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Use plain origin strings, matching your Vite browser URL.
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173",
                 "http://localhost:5174",
@@ -146,20 +182,52 @@ public class SecurityConfig {
         ));
 
         configuration.setAllowedMethods(List.of(
-                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS"
         ));
 
         configuration.setAllowedHeaders(List.of(
-                "Authorization", "Content-Type", "Accept", "Origin"
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Origin"
         ));
 
-        configuration.setAllowCredentials(false);
+        configuration.setExposedHeaders(List.of(
+                "Authorization"
+        ));
+
+        configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
+    }
+
+    // =========================================================
+    // 3. PREVENT DOUBLE REGISTRATION OF THE JWT FILTER
+    // =========================================================
+
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter>
+    jwtAuthenticationFilterRegistration(
+            JwtAuthenticationFilter filter
+    ) {
+        FilterRegistrationBean<JwtAuthenticationFilter> registration =
+                new FilterRegistrationBean<>(filter);
+
+        // The filter is managed by Spring Security above.
+        // Disable its separate servlet-container registration.
+        registration.setEnabled(false);
+
+        return registration;
     }
 }

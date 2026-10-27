@@ -1,17 +1,23 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { authApi } from "../api/interviewApi";
 import "./Login.css";
 
 export default function Login() {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [form, setForm] = useState({
-        email: "",
+        email: location.state?.email || "",
         password: "",
     });
 
     const [error, setError] = useState("");
+    const [success, setSuccess] = useState(
+        location.state?.registered
+            ? "Account created successfully. Please sign in."
+            : ""
+    );
     const [loading, setLoading] = useState(false);
 
     function handleChange(event) {
@@ -27,10 +33,11 @@ export default function Login() {
         event.preventDefault();
 
         setError("");
+        setSuccess("");
         setLoading(true);
 
         try {
-            const response = await api.post("/auth/login", {
+            const response = await authApi.login({
                 email: form.email.trim(),
                 password: form.password,
             });
@@ -38,24 +45,31 @@ export default function Login() {
             const data = response.data;
 
             if (!data.accessToken) {
-                throw new Error("Login response did not contain an access token.");
+                setError("Login response did not contain an access token.");
+                return;
             }
 
-            // Save authentication details only once.
             localStorage.setItem("accessToken", data.accessToken);
             localStorage.setItem("userRole", data.role);
             localStorage.setItem("userEmail", data.email);
 
-            // Redirect after successful login.
+            if (data.userId != null) {
+                localStorage.setItem("userId", String(data.userId));
+            } else {
+                localStorage.removeItem("userId");
+            }
+
             navigate("/dashboard", { replace: true });
         } catch (err) {
             if (err.response?.status === 401) {
                 setError("Invalid email or password.");
+            } else if (err.response?.status === 400) {
+                setError("Please check your email and password.");
             } else if (err.response?.status === 403) {
                 setError("You are not permitted to perform this action.");
             } else if (!err.response) {
                 setError(
-                    "Cannot connect to the server. Check the backend and CORS configuration."
+                    "Cannot reach the server. Check that Spring Boot is running and CORS is configured."
                 );
             } else {
                 setError(
@@ -79,20 +93,23 @@ export default function Login() {
 
                 <div className="login-heading">
                     <p className="eyebrow">WELCOME BACK</p>
-
                     <h1>Sign in to your account</h1>
-
                     <p className="login-subtitle">
                         Manage your interviews, availability, and bookings.
                     </p>
                 </div>
 
+                {success && (
+                    <div className="login-message success-message" role="status">
+                        {success}
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="login-form">
                     <div className="form-group">
-                        <label htmlFor="email">Email address</label>
-
+                        <label htmlFor="login-email">Email address</label>
                         <input
-                            id="email"
+                            id="login-email"
                             name="email"
                             type="email"
                             placeholder="you@example.com"
@@ -104,10 +121,9 @@ export default function Login() {
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="password">Password</label>
-
+                        <label htmlFor="login-password">Password</label>
                         <input
-                            id="password"
+                            id="login-password"
                             name="password"
                             type="password"
                             placeholder="Enter your password"
@@ -132,6 +148,13 @@ export default function Login() {
                         {loading ? "Signing in..." : "Sign in"}
                     </button>
                 </form>
+
+                <p className="auth-switch">
+                    Don't have an account?{" "}
+                    <Link className="auth-link" to="/register">
+                        Create account
+                    </Link>
+                </p>
 
                 <p className="login-footer">
                     Interview Scheduling Engine · Secure access

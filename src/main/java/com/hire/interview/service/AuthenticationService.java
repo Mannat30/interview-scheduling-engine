@@ -68,7 +68,8 @@ public class AuthenticationService {
                 "Bearer",
                 expirationMs,
                 user.getEmail(),
-                user.getRole().name()
+                user.getRole().name(),
+                user.getId()
         );
     }
 }
