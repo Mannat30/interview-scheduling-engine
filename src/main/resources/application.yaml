@@ -24,3 +24,7 @@ management:
 jwt:
   secret:  ${JWT_SECRET}
   expiration-ms: 3600000
+
+app:
+    registration:
+      interviewer-invite-code: ${INTERVIEWER_INVITE_CODE:}
